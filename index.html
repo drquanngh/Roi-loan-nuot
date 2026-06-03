@@ -3,372 +3,291 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eCRF: Nghiên cứu Rối loạn nuốt & Lão khoa toàn diện</title>
+    <title>Hệ thống eCRF Quản lý & Nghiên cứu Rối loạn nuốt nâng cao</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.185.0/xlsx.full.min.js"></script>
+    <style>
+        /* Thuật toán CSS kiểm soát trạng thái điền dữ liệu */
+        .input-field, .select-field {
+            border: 2px solid #fda4af; /* Viền đỏ nhạt ban đầu */
+            transition: all 0.3s ease;
+        }
+        /* Khi trường dữ liệu được điền hợp lệ (not empty) */
+        .input-field:not(:placeholder-shown), 
+        .select-field:has(option:not([value=""]):checked) {
+            border-color: #86efac !important; /* Viền xanh lá */
+            background-color: #f0fdf4 !important; /* Nền xanh lá siêu nhẹ */
+        }
+        /* Hiệu ứng highlight cho các checkbox khi được tích */
+        .checkbox-card {
+            transition: all 0.2s ease;
+        }
+        .checkbox-card:has(input:checked) {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans leading-normal">
+<body class="bg-slate-100 text-slate-800 font-sans leading-normal">
 
-    <header class="sticky top-0 bg-blue-900 text-white shadow-md z-50 px-6 py-4 flex justify-between items-center">
+    <header class="sticky top-0 bg-slate-900 text-white shadow-xl z-50 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-            <h1 class="text-xl font-bold tracking-tight text-white">HỆ THỐNG eCRF NGHIÊN CỨU RỐI LOẠN NUỐT</h1>
-            <p class="text-xs text-blue-200">Bệnh viện Lão khoa Trung ương | Thiết kế đa tầng chuyên biệt</p>
+            <h1 class="text-xl font-bold text-emerald-400">HỆ THỐNG QUẢN LÝ DỮ LIỆU NGHIÊN CỨU LÂM SÀNG (eCRF)</h1>
+            <p class="text-xs text-slate-400">Nghiên cứu Rối loạn nuốt & Lão khoa toàn diện | Lưu trữ nội bộ an toàn</p>
         </div>
-        <div class="flex gap-3">
-            <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded-lg shadow transition text-sm flex items-center gap-2">
-                📦 Xuất Dữ Liệu Excel (XLSX)
+        <div class="flex flex-wrap gap-2">
+            <button onclick="exportAllToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded-lg text-sm shadow-sm transition flex items-center gap-1">
+                📦 Xuất Toàn Bộ CSDL (Excel)
             </button>
-            <button onclick="resetForm()" class="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-3 rounded-lg text-sm transition">
-                Xóa làm lại
+            <button onclick="clearCurrentForm()" class="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-3 rounded-lg text-sm transition">
+                Tạo mới Form
             </button>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto my-8 px-4 pb-24">
-        <form id="ecrfForm" class="space-y-8">
+    <div class="max-w-7xl mx-auto my-6 px-4 grid grid-cols-1 lg:grid-cols-3 gap-6 pb-20">
+        
+        <div class="lg:col-span-1 bg-white p-4 rounded-xl shadow-md border border-slate-200 h-[calc(100vh-140px)] sticky top-24 flex flex-col">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
+                📂 Danh sách bệnh nhân lưu trữ (<span id="patient_count">0</span>)
+            </h2>
             
-            <section class="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
-                <h2 class="text-lg font-bold text-blue-900 border-b pb-2 mb-4 flex items-center gap-2">
-                    <span class="bg-blue-100 text-blue-900 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">I</span>
-                    PHẦN I. THÔNG TIN CƠ BẢN & TIỀN SỬ [cite: 3, 7]
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Mã bệnh nhân (Định danh mã hóa)</label>
-                        <input type="text" id="A00" required placeholder="Ví dụ: NCV-2026-001" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Giới tính [cite: 6]</label>
-                        <select id="A01" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-hidden">
-                            <option value="0">Nam [cite: 6]</option>
-                            <option value="1">Nữ [cite: 6]</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Năm sinh [cite: 6]</label>
-                        <input type="number" id="A02" placeholder="YYYY" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Tình trạng hôn nhân [cite: 6]</label>
-                        <select id="A05" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-hidden">
-                            <option value="0">Sống với vợ/chồng [cite: 6]</option>
-                            <option value="1">Độc thân [cite: 6]</option>
-                            <option value="2">Ly dị/ly thân [cite: 6]</option>
-                            <option value="3">Góa [cite: 6]</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Sống cùng ai hiện tại [cite: 6]</label>
-                        <select id="A07" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-hidden">
-                            <option value="0">Gia đình (vợ/chồng/con) [cite: 6]</option>
-                            <option value="1">Sống với người chăm sóc [cite: 6]</option>
-                            <option value="2">Sống một mình [cite: 6]</option>
-                            <option value="3">Khác [cite: 6]</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Trình độ học vấn [cite: 6]</label>
-                        <select id="A12" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-hidden">
-                            <option value="0">Cấp I [cite: 6]</option>
-                            <option value="1">Cấp II [cite: 6]</option>
-                            <option value="2">Cấp III [cite: 6]</option>
-                            <option value="3">Đại học [cite: 6]</option>
-                            <option value="4">Sau đại học [cite: 6]</option>
-                            <option value="999">Không rõ [cite: 6]</option>
-                        </select>
-                    </div>
-                </div>
+            <div class="mb-3">
+                <input type="text" id="search_box" oninput="renderPatientList()" placeholder="Tìm theo Mã hoặc Họ Tên..." class="w-full border border-slate-300 rounded-lg p-2 text-xs outline-hidden focus:ring-2 focus:ring-slate-500">
+            </div>
 
-                <div class="mt-6 border-t pt-4">
-                    <h3 class="text-sm font-bold text-slate-700 mb-3">Tiền sử & Bệnh đồng mắc [cite: 8, 9]</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C01" class="w-4 h-4 text-blue-600"> <span class="text-sm">Tăng huyết áp [cite: 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C03" class="w-4 h-4 text-blue-600"> <span class="text-sm">Đái tháo đường [cite: 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C04" class="w-4 h-4 text-blue-600"> <span class="text-sm">Alzheimer [cite: 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C05" class="w-4 h-4 text-blue-600"> <span class="text-sm">Sa sút trí tuệ [cite: 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C06" class="w-4 h-4 text-blue-600"> <span class="text-sm">Tai biến mạch não [cite: 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C08" class="w-4 h-4 text-blue-600"> <span class="text-sm">Suy tim mạn [cite: 8, 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C_Parkinson" class="w-4 h-4 text-blue-600"> <span class="text-sm">Parkinson [cite: 11]</span>
-                        </label>
-                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200 cursor-pointer">
-                            <input type="checkbox" id="C_Nhuerco" class="w-4 h-4 text-blue-600"> <span class="text-sm">Nhược cơ [cite: 11]</span>
-                        </label>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div id="patient_list_container" class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
+                </div>
+        </div>
+
+        <div class="lg:col-span-2 space-y-6">
+            <form id="ecrfForm" class="space-y-6">
+                
+                <section class="bg-blue-50/70 p-6 rounded-xl border border-blue-200 shadow-xs">
+                    <h2 class="text-base font-bold text-blue-900 border-b border-blue-200 pb-2 mb-4 flex items-center gap-2">
+                        <span class="bg-blue-600 text-white w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">1</span>
+                        THÔNG TIN CƠ BẢN & HÀNH CHÍNH
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">Chỉ số bệnh đồng mắc Charlson (CCI)</label>
-                            <input type="number" id="C_CCI" class="w-full border border-slate-300 rounded-lg p-2 outline-hidden">
+                            <label class="block font-semibold text-slate-700 mb-1">A00. Họ và tên bệnh nhân <span class="text-red-500">*</span></label>
+                            <input type="text" id="A00" required placeholder="Nhập đầy đủ tên" class="input-field w-full rounded-lg p-2 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">Số lượng các thuốc đang sử dụng mạn tính [cite: 11]</label>
-                            <input type="number" id="C_Thuoc" class="w-full border border-slate-300 rounded-lg p-2 outline-hidden">
+                            <label class="block font-semibold text-slate-700 mb-1">Mã định danh bệnh án (ID) <span class="text-red-500">*</span></label>
+                            <input type="text" id="A00_ID" required placeholder="Ví dụ: ĐN-001" class="input-field w-full rounded-lg p-2 outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">A01. Giới tính</label>
+                            <select id="A01" class="select-field w-full rounded-lg p-2 outline-hidden">
+                                <option value="">-- Chọn --</option>
+                                <option value="0">0. Nam</option>
+                                <option value="1">1. Nữ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">A02. Năm sinh (Dương lịch)</label>
+                            <input type="number" id="A02" placeholder="Nhập năm sinh" class="input-field w-full rounded-lg p-2 outline-hidden">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">A05. Tình trạng hôn nhân</label>
+                            <select id="A05" class="select-field w-full rounded-lg p-2 outline-hidden">
+                                <option value="">-- Chọn --</option>
+                                <option value="0">0. Sống với vợ/chồng</option>
+                                <option value="1">1. Độc thân</option>
+                                <option value="2">2. Ly dị/ly thân</option>
+                                <option value="3">3. Góa</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">A07. Hiện tại đang sống với</label>
+                            <select id="A07" class="select-field w-full rounded-lg p-2 outline-hidden">
+                                <option value="">-- Chọn --</option>
+                                <option value="0">0. Gia đình (vợ/chồng/con)</option>
+                                <option value="1">1. Sống với người chăm sóc</option>
+                                <option value="2">2. Sống một mình</option>
+                                <option value="3">3. Khác</option>
+                            </select>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section class="bg-white p-6 rounded-xl shadow-xs border border-slate-200 space-y-6">
-                <h2 class="text-lg font-bold text-blue-900 border-b pb-2 mb-4 flex items-center gap-2">
-                    <span class="bg-blue-100 text-blue-900 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">II</span>
-                    PHẦN II. ĐÁNH GIÁ RỐI LOẠN NUỐT ĐA TẦNG [cite: 12]
-                </h2>
-
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-blue-900">2.1. TẦNG 1A: Bộ câu hỏi sàng lọc EAT-10 [cite: 13, 14]</h3>
-                        <div class="bg-blue-900 text-white text-xs font-bold px-3 py-1 rounded-full">
-                            Điểm EAT-10: <span id="eat10_total">0</span>/40 [cite: 19]
+                <section class="bg-slate-50 p-6 rounded-xl border border-slate-300 shadow-xs">
+                    <div class="flex justify-between items-center border-b border-slate-300 pb-2 mb-4">
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <span class="bg-slate-700 text-white w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">2</span>
+                            TIỀN SỬ & ĐÁNH GIÁ CHỈ SỐ BỆNH ĐỒNG MẮC CHARLSON (CCI)
+                        </h2>
+                        <div class="bg-slate-900 text-emerald-400 font-bold px-3 py-1 rounded-md text-sm shadow-xs">
+                            Tổng điểm CCI: <span id="cci_total">0</span> điểm
                         </div>
                     </div>
-                    <p class="text-xs text-slate-500 mb-4 italic">Đánh giá mức độ từ 0 (Không vấn đề) đến 4 (Nặng) trong 2 tuần gần đây[cite: 15, 16, 17].</p>
                     
-                    <div class="space-y-2" id="eat10_container">
-                        </div>
-                    <div id="eat10_warning" class="mt-3 p-2 rounded-sm hidden text-xs font-bold"></div>
-                </div>
-
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h3 class="text-sm font-bold text-blue-900 mb-3">2.2. TẦNG 1B: Thang điểm đánh giá SSA (Standardized Swallowing Assessment) [cite: 21]</h3>
+                    <p class="text-2xs text-slate-500 italic mb-4">Tích chọn các bệnh lý dưới đây. Hệ thống sẽ tự động tính toán tổng điểm thích ứng theo trọng số chuẩn đoán của biểu đồ Charlson Comorbidity Index.</p>
                     
-                    <div class="space-y-4">
-                        <div class="p-3 bg-white rounded-lg border">
-                            <p class="text-xs font-bold text-slate-600 mb-2">Bước 1 & Bước 2: Đánh giá lâm sàng và gián tiếp [cite: 22]</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                                <label class="flex justify-between items-center p-1 border-b">
-                                    <span>1. NB tỉnh, đáp ứng với lời nói [cite: 22]</span>
-                                    <select id="SSA_1" onchange="calculateSSA()" class="border rounded-sm p-1"><option value="1">Có [cite: 22]</option><option value="0">Không [cite: 22]</option></select>
-                                </label>
-                                <label class="flex justify-between items-center p-1 border-b">
-                                    <span>2. NB ngồi thẳng, kiểm soát đầu cổ [cite: 22]</span>
-                                    <select id="SSA_2" onchange="calculateSSA()" class="border rounded-sm p-1"><option value="1">Có [cite: 22]</option><option value="0">Không [cite: 22]</option></select>
-                                </label>
-                                <label class="flex justify-between items-center p-1 border-b">
-                                    <span>3. NB có thể ho theo lệnh [cite: 22]</span>
-                                    <select id="SSA_3" onchange="calculateSSA()" class="border rounded-sm p-1"><option value="1">Có [cite: 22]</option><option value="0">Không [cite: 22]</option></select>
-                                </label>
-                                <label class="flex justify-between items-center p-1 border-b">
-                                    <span>4. NB tự kiểm soát được nước bọt [cite: 22]</span>
-                                    <select id="SSA_4" onchange="calculateSSA()" class="border rounded-sm p-1"><option value="1">Có [cite: 22]</option><option value="0">Không [cite: 22]</option></select>
-                                </label>
-                                <label class="flex justify-between items-center p-1 border-b">
-                                    <span>5. NB vận động lưỡi linh hoạt [cite: 22]</span>
-                                    <select id="SSA_5" onchange="calculateSSA()" class="border rounded-sm p-1"><option value="1">Có [cite: 22]</option><option value="0">Không [cite: 22]</option></select>
-                                </label>
-                                <label class="flex justify-between items-center p-1 border-b">
-                                    <span>6. Hô hấp không cần hỗ trợ (SpO2 $\ge$ 95%)</span>
-                                    <select id="SSA_6" onchange="calculateSSA()" class="border rounded-sm p-1"><option value="1">Có [cite: 22]</option><option value="0">Không [cite: 22]</option></select>
-                                </label>
+                    <div class="space-y-4 text-xs">
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2 border-l-2 border-slate-400 pl-2">Nhóm bệnh lý tính 1 điểm</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_MI" data-weight="1" onchange="calculateCCI()"> Nhồi máu cơ tim (Tiền sử hoặc ĐTĐ thay đổi)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_CHF" data-weight="1" onchange="calculateCCI()"> Suy tim ứ huyết (CHF)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_PVD" data-weight="1" onchange="calculateCCI()"> Bệnh mạch máu ngoại vi (PVD)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_CVD" data-weight="1" onchange="calculateCCI()"> Bệnh mạch máu não (CVD - gồm Đột quỵ/TIA)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_DEM" data-weight="1" onchange="calculateCCI()"> Sa sút trí tuệ (Dementia / Alzheimer)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_COPD" data-weight="1" onchange="calculateCCI()"> Bệnh phổi mạn tính (COPD/Hen phế quản nặng)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_CTD" data-weight="1" onchange="calculateCCI()"> Bệnh mô liên kết (Mô liên kết/Hệ thống)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_PUD" data-weight="1" onchange="calculateCCI()"> Loét dạ dày tá tràng (PUD)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_MILD_LIVER" data-weight="1" onchange="calculateCCI()"> Bệnh gan nhẹ (Xơ gan không cổ chướng)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_1_DM" data-weight="1" onchange="calculateCCI()"> Đái tháo đường không biến chứng cơ quan đích</label>
                             </div>
                         </div>
 
-                        <div id="ssa_step3_container" class="p-3 bg-white rounded-lg border">
-                            <p class="text-xs font-bold text-slate-600 mb-2">Bước 3: Thử nghiệm nuốt nước (5ml $\times$ 3 lần, sau đó 50ml) [cite: 22]</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                                <label class="flex items-center gap-2"><input type="checkbox" id="SSA_7_1" onchange="calculateSSA()"> Ho/Sặc khi nuốt [cite: 22]</label>
-                                <label class="flex items-center gap-2"><input type="checkbox" id="SSA_7_2" onchange="calculateSSA()"> Giọng khàn/ướt sau nuốt [cite: 22]</label>
-                                <label class="flex items-center gap-2"><input type="checkbox" id="SSA_7_3" onchange="calculateSSA()"> Khó thở thay đổi nhịp thở [cite: 22]</label>
-                                <label class="flex items-center gap-2"><input type="checkbox" id="SSA_7_4" onchange="calculateSSA()"> Chảy nước ra ngoài miệng [cite: 22]</label>
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2 border-l-2 border-slate-500 pl-2">Nhóm bệnh lý tính 2 điểm</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_2_DMC" data-weight="2" onchange="calculateCCI()"> Đái tháo đường có biến chứng mạn tính cơ quan đích</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_2_HEMI" data-weight="2" onchange="calculateCCI()"> Liệt nửa người hoặc liệt tứ chi (Hemiplegia/Paraplegia)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_2_RENAL" data-weight="2" onchange="calculateCCI()"> Bệnh thận mức độ vừa đến nặng (Cr > 3mg/dL hoặc chạy thận)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_2_MALIG" data-weight="2" onchange="calculateCCI()"> Các khối u ác tính dạng đặc (Tạng đặc, chưa di căn xa)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_2_LEUK" data-weight="2" onchange="calculateCCI()"> Bệnh máu ác tính (Bệnh bạch cầu/Leukemia)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_2_LYMP" data-weight="2" onchange="calculateCCI()"> U lympho ác tính (Lymphoma)</label>
                             </div>
                         </div>
-                        <div id="ssa_status" class="p-2 rounded-lg text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200">Đang cập nhật...</div>
-                    </div>
-                </div>
 
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-blue-900">2.3. TẦNG 2: Thang điểm GUSS (Gugging Swallowing Screen) [cite: 37]</h3>
-                        <div class="bg-teal-700 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2 border-l-2 border-slate-600 pl-2">Nhóm bệnh lý tính 3 điểm</h4>
+                            <div class="grid grid-cols-1">
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_3_LIVER" data-weight="3" onchange="calculateCCI()"> Bệnh gan mức độ vừa đến nặng (Xơ gan mất bù, tăng áp TM cửa)</label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-slate-700 mb-2 border-l-2 border-slate-700 pl-2">Nhóm bệnh lý tính 6 điểm</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_6_METASTS" data-weight="6" onchange="calculateCCI()"> Khối u ác tính di căn xa (Metastatic solid tumor)</label>
+                                <label class="checkbox-card flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer"><input type="checkbox" id="CCI_6_AIDS" data-weight="6" onchange="calculateCCI()"> HIV / AIDS (Có triệu chứng lâm sàng)</label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-amber-50/70 p-6 rounded-xl border border-amber-200 shadow-xs">
+                    <div class="flex justify-between items-center border-b border-amber-200 pb-2 mb-4">
+                        <h2 class="text-base font-bold text-amber-900 flex items-center gap-2">
+                            <span class="bg-amber-600 text-white w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">3</span>
+                            BỘ CÂU HỎI SANG LỌC NGUY CƠ EAT-10
+                        </h2>
+                        <div class="bg-amber-900 text-white font-bold px-3 py-1 rounded-md text-sm">
+                            Điểm EAT-10: <span id="eat10_total">0</span>/40
+                        </div>
+                    </div>
+                    <div class="space-y-2" id="eat10_container"></div>
+                    <div id="eat10_warning" class="mt-3 p-2 rounded-lg text-xs font-bold hidden"></div>
+                </section>
+
+                <section class="bg-emerald-50/70 p-6 rounded-xl border border-emerald-200 shadow-xs space-y-4">
+                    <div class="flex justify-between items-center border-b border-emerald-200 pb-2 mb-2">
+                        <h2 class="text-base font-bold text-emerald-900 flex items-center gap-2">
+                            <span class="bg-emerald-600 text-white w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">4</span>
+                            THANG ĐIỂM ĐÁNH GIÁ CHUYÊN SÂU GUSS
+                        </h2>
+                        <div class="bg-emerald-900 text-white font-bold px-3 py-1 rounded-md text-sm">
                             Tổng GUSS: <span id="guss_total">0</span>/20
                         </div>
                     </div>
                     
                     <div class="space-y-3 text-xs">
                         <div class="bg-white p-3 rounded-lg border">
-                            <p class="font-bold text-slate-700 mb-2">Phần 1: Đánh giá gián tiếp (Indirect Swallowing) [cite: 38]</p>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <label>Tỉnh táo [cite: 39]: <select id="G_E01" onchange="calculateGUSS()" class="border p-1 rounded-sm w-full"><option value="1">Tỉnh táo hoàn toàn (1đ) [cite: 39]</option><option value="0">Giảm ý thức (0đ) [cite: 39]</option></select></label>
-                                <label>Ho chủ động [cite: 39]: <select id="G_E02" onchange="calculateGUSS()" class="border p-1 rounded-sm w-full"><option value="1">Có (1đ) [cite: 39]</option><option value="0">Không (0đ) [cite: 39]</option></select></label>
-                                <label>Nuốt nước bọt [cite: 39]: <select id="G_E03" onchange="calculateGUSS()" class="border p-1 rounded-sm w-full"><option value="1">Bình thường (1đ) [cite: 39]</option><option value="0">Bất thường (0đ) [cite: 39]</option></select></label>
-                                <label>Chảy nước dãi [cite: 39]: <select id="G_E04" onchange="calculateGUSS()" class="border p-1 rounded-sm w-full"><option value="1">Không (1đ) [cite: 39]</option><option value="0">Có (0đ) [cite: 39]</option></select></label>
-                                <label>Giọng nói sau nuốt [cite: 39]: <select id="G_E05" onchange="calculateGUSS()" class="border p-1 rounded-sm w-full"><option value="1">Bình thường (1đ) [cite: 39]</option><option value="0">Khàn/ướt (0đ) [cite: 39]</option></select></label>
+                            <p class="font-bold text-slate-700 mb-2">Phần 1: Đánh giá gián tiếp</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label>Tỉnh táo hoàn toàn: <select id="G_E01" onchange="calculateGUSS()" class="select-field p-1 rounded-sm w-full"><option value="">- Chọn -</option><option value="1">Có (1đ)</option><option value="0">Không (0đ)</option></select></label>
+                                <label>Ho chủ động: <select id="G_E02" onchange="calculateGUSS()" class="select-field p-1 rounded-sm w-full"><option value="">- Chọn -</option><option value="1">Có (1đ)</option><option value="0">Không (0đ)</option></select></label>
+                                <label>Nuốt nước bọt chủ động: <select id="G_E03" onchange="calculateGUSS()" class="select-field p-1 rounded-sm w-full"><option value="">- Chọn -</option><option value="1">Bình thường (1đ)</option><option value="0">Bất thường (0đ)</option></select></label>
+                                <label>Chả nước dãi bên miệng: <select id="G_E04" onchange="calculateGUSS()" class="select-field p-1 rounded-sm w-full"><option value="">- Chọn -</option><option value="1">Không (1đ)</option><option value="0">Có (0đ)</option></select></label>
+                                <label>Thay đổi giọng nói sau nuốt: <select id="G_E05" onchange="calculateGUSS()" class="select-field p-1 rounded-sm w-full"><option value="">- Chọn -</option><option value="1">Không (1đ)</option><option value="0">Có/Khàn (0đ)</option></select></label>
                             </div>
                         </div>
 
-                        <div id="guss_direct_section" class="bg-white p-3 rounded-lg border space-y-3">
-                            <p class="font-bold text-slate-700">Phần 2: Đánh giá trực tiếp (Direct Swallowing) [cite: 42]</p>
-                            
-                            <div class="border-l-4 border-amber-500 pl-3">
-                                <span class="font-semibold text-slate-600 block">Thức ăn bán rắn (Semi-Solid) [cite: 43]</span>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-                                    <label><input type="checkbox" id="G_F01" onchange="calculateGUSS()" checked> Nuốt tốt [cite: 44]</label>
-                                    <label><input type="checkbox" id="G_F02" onchange="calculateGUSS()"> Có ho [cite: 44]</label>
-                                    <label><input type="checkbox" id="G_F03" onchange="calculateGUSS()"> Thay đổi giọng [cite: 44]</label>
-                                    <label><input type="checkbox" id="G_F04" onchange="calculateGUSS()"> Rơi vãi thức ăn [cite: 44]</label>
+                        <div id="guss_direct_section" class="bg-white p-3 rounded-lg border space-y-2">
+                            <p class="font-bold text-slate-700">Phần 2: Đánh giá trực tiếp</p>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div class="p-2 bg-amber-50 rounded-md border border-amber-200">
+                                    <span class="font-bold block text-amber-900 mb-1">Bán rắn (Semi-solid)</span>
+                                    <select id="G_S_Semi" onchange="calculateGUSS()" class="select-field w-full p-1"><option value="">- Chọn -</option><option value="5">Hợp lệ/Nuốt tốt (5đ)</option><option value="0">Sặc/Ho/Nghẹn (0đ)</option></select>
                                 </div>
-                            </div>
-
-                            <div class="border-l-4 border-blue-500 pl-3">
-                                <span class="font-semibold text-slate-600 block">Chất lỏng (Liquid) [cite: 45]</span>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-                                    <label><input type="checkbox" id="G_H01" onchange="calculateGUSS()" checked> Nuốt tốt [cite: 45]</label>
-                                    <label><input type="checkbox" id="G_H02" onchange="calculateGUSS()"> Có ho [cite: 45]</label>
-                                    <label><input type="checkbox" id="G_H03" onchange="calculateGUSS()"> Thay đổi giọng [cite: 45]</label>
-                                    <label><input type="checkbox" id="G_H04" onchange="calculateGUSS()"> Rơi vãi [cite: 45]</label>
+                                <div class="p-2 bg-blue-50 rounded-md border border-blue-200">
+                                    <span class="font-bold block text-blue-900 mb-1">Chất lỏng (Liquid)</span>
+                                    <select id="G_S_Liq" onchange="calculateGUSS()" class="select-field w-full p-1"><option value="">- Chọn -</option><option value="5">Hợp lệ/Nuốt tốt (5đ)</option><option value="0">Sặc/Ho/Nghẹn (0đ)</option></select>
                                 </div>
-                            </div>
-
-                            <div class="border-l-4 border-red-500 pl-3">
-                                <span class="font-semibold text-slate-600 block">Thức ăn đặc (Solid) [cite: 45]</span>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-                                    <label><input type="checkbox" id="G_H05" onchange="calculateGUSS()" checked> Nuốt tốt [cite: 45]</label>
-                                    <label><input type="checkbox" id="G_H06" onchange="calculateGUSS()"> Có ho [cite: 45]</label>
-                                    <label><input type="checkbox" id="G_H07" onchange="calculateGUSS()"> Thay đổi giọng [cite: 45]</label>
-                                    <label><input type="checkbox" id="G_H08" onchange="calculateGUSS()"> Rơi vãi [cite: 45]</label>
+                                <div class="p-2 bg-red-50 rounded-md border border-red-200">
+                                    <span class="font-bold block text-red-900 mb-1">Chất đặc (Solid)</span>
+                                    <select id="G_S_Sol" onchange="calculateGUSS()" class="select-field w-full p-1"><option value="">- Chọn -</option><option value="5">Hợp lệ/Nuốt tốt (5đ)</option><option value="0">Sặc/Ho/Nghẹn (0đ)</option></select>
                                 </div>
                             </div>
                         </div>
                         <div id="guss_status" class="p-2 rounded-lg text-xs font-bold"></div>
                     </div>
-                </div>
+                </section>
 
-                <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                    <h3 class="text-sm font-bold text-blue-950 mb-3">2.4. TẦNG 3: Nội soi chức năng nuốt ống mềm (FEES - Tiêu chuẩn vàng) [cite: 48]</h3>
+                <section class="bg-purple-50/70 p-6 rounded-xl border border-purple-200 shadow-xs">
+                    <h2 class="text-base font-bold text-purple-900 border-b border-purple-200 pb-2 mb-4 flex items-center gap-2">
+                        <span class="bg-purple-600 text-white w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">5</span>
+                        CHẨN ĐOÁN HÌNH ẢNH CAN THIỆP CHUYÊN SÂU (FEES)
+                    </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <div class="bg-white p-3 rounded-lg border">
-                            <label class="block font-bold text-slate-700 mb-1">Thang điểm xâm nhập - hít sặc (PAS) [cite: 49]</label>
-                            <select id="K_PAS" class="w-full border p-2 rounded-md"><option value="1">1. Thức ăn không vào đường thở [cite: 50, 52]</option><option value="2">2. Vào trên dây thanh, tống ra hết [cite: 50, 52]</option><option value="3">3. Vào trên dây thanh, không tống ra [cite: 50, 53]</option><option value="4">4. Chạm dây thanh, tống ra hết [cite: 50, 53]</option><option value="5">5. Chạm dây thanh, không tống ra [cite: 50, 53]</option><option value="6">6. Qua dây thanh, tống ra ngoài [cite: 50, 54]</option><option value="7">7. Qua dây thanh, không tống ra được [cite: 50, 54]</option><option value="8">8. Qua dây thanh, không phản xạ (Sặc im lặng) [cite: 50, 54]</option></select>
+                            <label class="block font-bold text-slate-700 mb-1">Thang điểm xâm nhập - hít sặc (PAS)</label>
+                            <select id="K_PAS" class="select-field w-full p-2 rounded-md"><option value="">- Chọn mức độ -</option><option value="1">1. Thức ăn không vào đường thở</option><option value="2">2. Vào trên dây thanh, tống ra hết</option><option value="3">3. Vào trên dây thanh, không tống ra</option><option value="4">4. Chạm dây thanh, tống ra hết</option><option value="5">5. Chạm dây thanh, không tống ra</option><option value="6">6. Qua dây thanh, tống ra ngoài</option><option value="7">7. Qua dây thanh, không tống ra được</option><option value="8">8. Qua dây thanh, sặc im lặng</option></select>
                         </div>
                         <div class="bg-white p-3 rounded-lg border">
-                            <label class="block font-bold text-slate-700 mb-1">Thang điểm HYODO (Tổng dịch đọng & phản xạ) [cite: 55]</label>
-                            <div class="grid grid-cols-2 gap-2 text-2xs">
-                                <label>Ứ đọng nước bọt[cite: 57]: <select id="M01" class="border p-1 rounded-sm w-full"><option value="0">0. Không [cite: 57]</option><option value="1">1. Ít [cite: 57]</option><option value="2">2. Vừa [cite: 57]</option><option value="3">3. Nhiều [cite: 57]</option></select></label>
-                                <label>Đóng thanh môn/ho[cite: 57]: <select id="M02" class="border p-1 rounded-sm w-full"><option value="0">0. Bình thường [cite: 57]</option><option value="1">1. Giảm nhẹ [cite: 57]</option><option value="2">2. Giảm rõ [cite: 57]</option><option value="3">3. Mất [cite: 57]</option></select></label>
-                                <label>Phản xạ nuốt[cite: 57]: <select id="M03" class="border p-1 rounded-sm w-full"><option value="0">0. Bình thường [cite: 57]</option><option value="1">1. Chậm [cite: 57]</option><option value="2">2. Rất chậm [cite: 57]</option><option value="3">3. Không có [cite: 57]</option></select></label>
-                                <label>Dọn sạch sau nuốt[cite: 57]: <select id="M04" class="border p-1 rounded-sm w-full"><option value="0">0. Sạch [cite: 57]</option><option value="1">1. Còn ít [cite: 57]</option><option value="2">2. Còn nhiều [cite: 57]</option><option value="3">3. Không dọn sạch [cite: 57]</option></select></label>
-                            </div>
+                            <label class="block font-bold text-slate-700 mb-1">Phân loại Đọng dịch / Phản xạ (HYODO)</label>
+                            <input type="number" id="Hyodo_Score" min="0" max="12" placeholder="Tổng điểm tự tính (0-12)" class="input-field w-full p-2 rounded-md">
                         </div>
                     </div>
-                    <div id="verification_bias_alert" class="mt-4 p-3 rounded-lg bg-red-100 text-red-900 font-medium text-xs hidden border border-red-300">
-                        ⚠️ <strong>Cảnh báo Sai số kiểm chứng (Verification Bias):</strong> Ca này có kết quả Sàng lọc âm tính nhưng vẫn được chỉ định làm FEES. Hệ thống sẽ tự động gán cờ phân nhóm để phục vụ hiệu chỉnh thuật toán Bayes (Begg & Greenes) khi xử lý thống kê[cite: 68, 69, 70, 72, 73]!
-                    </div>
-                </div>
-            </section>
+                </section>
 
-            <section class="bg-white p-6 rounded-xl shadow-xs border border-slate-200 space-y-6">
-                <h2 class="text-lg font-bold text-blue-900 border-b pb-2 mb-4 flex items-center gap-2">
-                    <span class="bg-blue-100 text-blue-900 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">III</span>
-                    PHẦN III. ĐÁNH GIÁ LÃO KHOA TOÀN DIỆN (CGA) [cite: 79]
-                </h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-slate-50 p-4 rounded-xl border">
-                        <label class="block font-bold text-slate-700 text-sm mb-2">3.1 Thang điểm suy yếu lâm sàng (CFS 2.0) [cite: 80]</label>
-                        <select id="CFS_Score" class="w-full border p-2 bg-white rounded-md text-xs"><option value="1">1 - Rất khỏe (Tập thể dục thường xuyên) [cite: 83]</option><option value="2">2 - Khỏe (Hoạt động bình thường theo mùa) [cite: 83]</option><option value="3">3 - Khá khỏe (Bệnh mạn kiểm soát tốt) [cite: 83]</option><option value="4">4 - Dễ mắc bệnh (Than phiền "chậm chạp dần") [cite: 83]</option><option value="5">5 - Suy yếu nhẹ (Cần hỗ trợ các hoạt động IADL phức tạp) [cite: 83]</option><option value="6">6 - Suy yếu trung bình (Cần giúp đỡ mọi việc bên ngoài, đi lại khó) [cite: 83]</option><option value="7">7 - Suy yếu nặng (Phụ thuộc hoàn toàn chăm sóc cá nhân) [cite: 83]</option><option value="8">8 - Suy yếu rất nặng (Giai đoạn cuối đời, không thể hồi phục) [cite: 83]</option><option value="9">9 - Bệnh giai đoạn cuối (Kỳ vọng sống < 6 tháng) [cite: 83]</option></select>
-                    </div>
-
-                    <div class="bg-slate-50 p-4 rounded-xl border space-y-2 text-xs">
-                        <span class="block font-bold text-slate-700 text-sm">3.2 Sàng lọc Thiểu cơ (SARC-F) & Đo đạc [cite: 85, 86]</span>
-                        <div class="grid grid-cols-2 gap-2 bg-white p-2 rounded-md border">
-                            <label>Lực bóp tay (kg)[cite: 86]: <input type="number" step="0.1" id="Sarc_Tay" placeholder="Nam <28, Nữ <18" class="border p-1 w-full rounded-sm"></label>
-                            <label>Chu vi bắp chân (cm)[cite: 86]: <input type="number" step="0.1" id="Sarc_Chan" placeholder="Nam <34, Nữ <33" class="border p-1 w-full rounded-sm"></label>
+                <section class="bg-pink-50/70 p-6 rounded-xl border border-pink-200 shadow-xs space-y-4">
+                    <h2 class="text-base font-bold text-pink-900 border-b border-pink-200 pb-2 mb-2 flex items-center gap-2">
+                        <span class="bg-pink-600 text-white w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">6</span>
+                        ĐÁNH GIÁ LÃO KHOA TOÀN DIỆN (CGA)
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div class="bg-white p-3 rounded-lg border">
+                            <label class="block font-bold text-slate-700 mb-1">Thang trạng thái suy yếu (CFS 2.0)</label>
+                            <select id="CFS_Score" class="select-field w-full p-2 rounded-md"><option value="">- Chọn -</option><option value="1">1 - Rất khỏe mạnh</option><option value="2">2 - Khỏe mạnh bình thường</option><option value="3">3 - Khá khỏe (bệnh nền ổn định)</option><option value="4">4 - Dễ bị tổn thương</option><option value="5">5 - Suy yếu mức độ nhẹ</option><option value="6">6 - Suy yếu mức độ vừa</option><option value="7">7 - Suy yếu mức độ nặng</option><option value="8">8 - Suy yếu rất nặng</option><option value="9">9 - Giai đoạn cuối đời</option></select>
                         </div>
-                        <p class="text-2xs text-slate-400 italic">Nhập điểm tổng SARC-F tự tính từ bảng lâm sàng: [cite: 86]</p>
-                        <input type="number" id="Sarc_F_Total" placeholder="Nguy cơ cao nếu $\ge$ 4 điểm" class="border p-2 bg-white w-full rounded-md">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-slate-50 p-4 rounded-xl border text-xs">
-                        <label class="block font-bold text-slate-700 text-sm mb-1">3.3 Hoạt động hàng ngày cơ bản (ADL - Katz Index) [cite: 87, 88]</label>
-                        <p class="text-2xs text-slate-400 mb-2">Đánh giá 6 chức năng (Tắm, Mặc, Vệ sinh, Di chuyển, Tự chủ đại tiểu tiện, Ăn uống) [cite: 89]</p>
-                        <input type="number" id="ADL_Score" max="6" min="0" placeholder="Điểm tổng (0 - 6). 6đ: Độc lập hoàn toàn" class="w-full border p-2 bg-white rounded-md">
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border text-xs">
-                        <label class="block font-bold text-slate-700 text-sm mb-1">3.4 Hoạt động công cụ phức tạp (IADL - Lawton) [cite: 94]</label>
-                        <p class="text-2xs text-slate-400 mb-2">Đánh giá 8 chức năng xã hội (Điện thoại, mua sắm, thuốc men, tài chính...) [cite: 95]</p>
-                        <input type="number" id="IADL_Score" max="8" min="0" placeholder="Điểm tổng (0 - 8). 8đ: Độc lập hoàn toàn" class="w-full border p-2 bg-white rounded-md">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-slate-50 p-4 rounded-xl border text-xs">
-                        <label class="block font-bold text-slate-700 text-sm mb-1">3.5 Thang Trầm cảm lão khoa (GDS-15) [cite: 100]</label>
-                        <input type="number" id="GDS_Score" max="15" min="0" placeholder="Nhập tổng điểm GDS (0 - 15)" class="w-full border p-2 bg-white rounded-md">
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl border text-xs">
-                        <label class="block font-bold text-slate-700 text-sm mb-1">3.6 Đánh giá nhận thức nhanh (Mini-Cog) [cite: 102]</label>
-                        <div class="flex gap-2">
-                            <select id="MiniCog_Status" class="border p-2 bg-white rounded-md w-full"><option value="0">Bình thường [cite: 117, 118]</option><option value="1">Suy giảm nhận thức [cite: 117, 118]</option></select>
+                        <div class="bg-white p-3 rounded-lg border">
+                            <label class="block font-bold text-slate-700 mb-1">Điểm Sàng lọc Thiểu cơ (SARC-F)</label>
+                            <input type="number" id="Sarc_F_Total" min="0" max="10" placeholder="Thang điểm tổng (0-10)" class="input-field w-full p-2 rounded-md">
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border">
+                            <label class="block font-bold text-slate-700 mb-1">Nhận thức nhanh (Mini-Cog)</label>
+                            <select id="MiniCog_Status" class="select-field w-full p-2 rounded-md"><option value="">- Chọn -</option><option value="0">0. Bình thường</option><option value="1">1. Suy giảm nhận thức</option></select>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border">
+                            <label class="block font-bold text-slate-700 mb-1">Hoạt động độc lập ADL (Katz)</label>
+                            <input type="number" id="ADL_Score" min="0" max="6" placeholder="Điểm tổng (0-6)" class="input-field w-full p-2 rounded-md">
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border">
+                            <label class="block font-bold text-slate-700 mb-1">Hoạt động công cụ IADL (Lawton)</label>
+                            <input type="number" id="IADL_Score" min="0" max="8" placeholder="Điểm tổng (0-8)" class="input-field w-full p-2 rounded-md">
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border">
+                            <label class="block font-bold text-slate-700 mb-1">Thang Trầm cảm Lão khoa (GDS-15)</label>
+                            <input type="number" id="GDS_Score" min="0" max="15" placeholder="Điểm tổng (0-15)" class="input-field w-full p-2 rounded-md">
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section class="bg-white p-6 rounded-xl shadow-xs border border-slate-200">
-                <h2 class="text-lg font-bold text-blue-900 border-b pb-2 mb-4 flex items-center gap-2">
-                    <span class="bg-blue-100 text-blue-900 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">IV</span>
-                    PHẦN IV: CAN THIỆP PEG VÀ THEO DÕI DỌC (T0, T1, T6) [cite: 176]
-                </h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs border-collapse">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-700 border-b">
-                                <th class="p-3 font-semibold">Chỉ số theo dõi [cite: 177]</th>
-                                <th class="p-3 font-semibold">T0 (Trước can thiệp) [cite: 177]</th>
-                                <th class="p-3 font-semibold">T1 (Sau 1 tháng) [cite: 177]</th>
-                                <th class="p-3 font-semibold">T6 (Sau 6 tháng) [cite: 177]</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y text-slate-600">
-                            <tr>
-                                <td class="p-3 font-medium text-slate-900">Cân nặng (kg) / Chỉ số BMI [cite: 177]</td>
-                                <td class="p-2"><input type="text" id="T0_BMI" class="border p-1 rounded-sm w-full"></td>
-                                <td class="p-2"><input type="text" id="T1_BMI" class="border p-1 rounded-sm w-full"></td>
-                                <td class="p-2"><input type="text" id="T6_BMI" class="border p-1 rounded-sm w-full"></td>
-                            </tr>
-                            <tr>
-                                <td class="p-3 font-medium text-slate-900">Albumin huyết thanh (g/dL) [cite: 177]</td>
-                                <td class="p-2"><input type="number" step="0.1" id="T0_Alb" class="border p-1 rounded-sm w-full"></td>
-                                <td class="p-2"><input type="number" step="0.1" id="T1_Alb" class="border p-1 rounded-sm w-full"></td>
-                                <td class="p-2"><input type="number" step="0.1" id="T6_Alb" class="border p-1 rounded-sm w-full"></td>
-                            </tr>
-                            <tr>
-                                <td class="p-3 font-medium text-slate-900">Số đợt viêm phổi hít [cite: 177]</td>
-                                <td class="p-2"><input type="number" id="T0_VPhit" class="border p-1 rounded-sm w-full"></td>
-                                <td class="p-2"><input type="number" id="T1_VPhit" class="border p-1 rounded-sm w-full"></td>
-                                <td class="p-2"><input type="number" id="T6_VPhit" class="border p-1 rounded-sm w-full"></td>
-                            </tr>
-                            <tr>
-                                <td class="p-3 font-medium text-slate-900">Biến chứng tại chân ống PEG [cite: 177]</td>
-                                <td class="p-2 text-slate-400 text-center">N/A</td>
-                                <td class="p-2"><select id="T1_Bienchung" class="border p-1 rounded-sm w-full"><option value="0">Không [cite: 177]</option><option value="1">Có [cite: 177]</option></select></td>
-                                <td class="p-2"><select id="T6_Bienchung" class="border p-1 rounded-sm w-full"><option value="0">Không [cite: 177]</option><option value="1">Có [cite: 177]</option></select></td>
-                            </tr>
-                            <tr>
-                                <td class="p-3 font-medium text-slate-900">Trạng thái ống nội soi [cite: 177]</td>
-                                <td class="p-2 text-slate-400 text-center">N/A</td>
-                                <td class="p-2 text-slate-400 text-center">N/A</td>
-                                <td class="p-2"><select id="T6_Status" class="border p-1 rounded-sm w-full"><option value="1">Còn lưu sonde [cite: 177]</option><option value="0">Đã rút ống thành công [cite: 177]</option></select></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="p-4 bg-slate-950 rounded-xl flex justify-between items-center shadow-lg">
+                    <span class="text-xs text-slate-400 italic">Kiểm tra kỹ các trường viền xanh trước khi bấm Lưu.</span>
+                    <button type="button" onclick="savePatientData()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-md text-sm transition">
+                        💾 LƯU / CẬP NHẬT HỒ SƠ BỆNH NHÂN
+                    </button>
                 </div>
-            </section>
-        </form>
-    </main>
+            </form>
+        </div>
+    </div>
 
     <script>
         const eat10Questions = [
@@ -382,182 +301,303 @@
             "Tôi luôn có cảm giác thức ăn mắc kẹt tại cổ họng",
             "Tôi bị ho hoặc sặc ngay khi đang ăn hoặc uống",
             "Việc nuốt làm tôi cảm thấy rất áp lực và căng thẳng"
-        ]; [cite: 18]
+        ];
 
-        // 1. Tạo giao diện EAT-10 tự động
-        const container = document.getElementById('eat10_container');
+        // Khởi động giao diện EAT-10
+        const eatContainer = document.getElementById('eat10_container');
         eat10Questions.forEach((q, idx) => {
             let div = document.createElement('div');
-            div.className = "flex flex-col md:flex-row md:items-center justify-between p-2 bg-white rounded-md border text-xs gap-2";
+            div.className = "flex flex-col md:flex-row md:items-center justify-between p-2 bg-white rounded-md border border-slate-200 text-xs gap-2 transition duration-200";
             div.innerHTML = `
                 <span class="font-medium text-slate-700">${idx+1}. ${q}</span>
                 <div class="flex gap-1 justify-end">
                     ${[0,1,2,3,4].map(score => `
-                        <label class="px-2 py-1 border rounded-md cursor-pointer hover:bg-blue-50">
-                            <input type="radio" name="eat_${idx}" value="${score}" ${score===0?'checked':''} onchange="calculateEAT10()" class="mr-1"> ${score}
+                        <label class="px-2 py-1 border rounded-md cursor-pointer hover:bg-blue-50 text-2xs flex items-center">
+                            <input type="radio" name="eat_${idx}" value="${score}" onchange="calculateEAT10()" class="mr-1"> ${score}
                         </label>
                     `).join('')}
                 </div>
             `;
-            container.appendChild(div);
+            eatContainer.appendChild(div);
         });
 
-        // 2. Tính toán điểm EAT-10 và kiểm soát luồng
+        // Tính điểm EAT-10
         function calculateEAT10() {
             let total = 0;
+            let answered = 0;
             for(let i=0; i<10; i++) {
                 let checked = document.querySelector(`input[name="eat_${i}"]:checked`);
-                if(checked) total += parseInt(checked.value);
+                if(checked) {
+                    total += parseInt(checked.value);
+                    answered++;
+                    // Thay đổi màu nền của câu đã chọn để biết không bỏ sót
+                    checked.closest('div').parentElement.style.backgroundColor = '#f0fdf4';
+                    checked.closest('div').parentElement.style.borderColor = '#86efac';
+                }
             }
             document.getElementById('eat10_total').innerText = total;
-            
             let warnDiv = document.getElementById('eat10_warning');
-            if(total >= 3) { [cite: 20]
-                warnDiv.className = "mt-3 p-2 rounded-lg text-xs font-bold bg-red-50 text-red-800 border border-red-200 block";
-                warnDiv.innerText = `👉 Kết quả ≥ 3 điểm: Bệnh nhân CÓ NGUY CƠ RỐI LOẠN NUỐT. Khuyến cáo bắt buộc thực hiện kiểm tra sâu tầng kế tiếp!`; [cite: 20]
+            if(total >= 3) {
+                warnDiv.className = "mt-3 p-2 rounded-lg text-xs font-bold bg-red-100 text-red-800 border border-red-200 block";
+                warnDiv.innerText = `⚠️ Điểm ≥ 3: Có nguy cơ rối loạn nuốt cơ năng.`;
             } else {
-                warnDiv.className = "mt-3 p-2 rounded-lg text-xs font-bold bg-green-50 text-green-700 border border-green-200 block";
-                warnDiv.innerText = `👉 Kết quả < 3 điểm: Ít nguy cơ lâm sàng đột biến.`; [cite: 20]
-            }
-            checkVerificationBias();
-        }
-
-        // 3. Quản lý tính toán logic Thang điểm SSA
-        function calculateSSA() {
-            let s1 = parseInt(document.getElementById('SSA_1').value);
-            let s2 = parseInt(document.getElementById('SSA_2').value);
-            let statusDiv = document.getElementById('SSA_status');
-
-            if(s1 === 0 || s2 === 0) { [cite: 22]
-                statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-red-100 text-red-900 border border-red-300 block";
-                statusDiv.innerText = "🛑 DỪNG ĐÁNH GIÁ LÂM SÀNG: Bệnh nhân không đủ tri giác hoặc không kiểm soát được đầu cổ. Đề xuất đặt thông dạ dày ngay hoặc chuyển PHCN chuyên sâu!"; [cite: 22, 29, 33]
-                document.getElementById('ssa_step3_container').classList.add('opacity-40', 'pointer-events-none');
-                return;
-            }
-
-            document.getElementById('ssa_step3_container').classList.remove('opacity-40', 'pointer-events-none');
-            
-            // Đọc trạng thái sặc nước biến chứng ở bước 3
-            let h1 = document.getElementById('SSA_7_1').checked;
-            let h2 = document.getElementById('SSA_7_2').checked;
-            let h3 = document.getElementById('SSA_7_3').checked;
-            let h4 = document.getElementById('SSA_7_4').checked;
-
-            if(h1 || h2 || h3 || h4) { [cite: 22]
-                statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 block";
-                statusDiv.innerText = "⚠️ XUẤT HIỆN DẤU HIỆU SẶC: Dừng thử nghiệm nuốt nước! Chuyển ngay sang tầng đánh giá GUSS hoặc chỉ định FEES tiêu chuẩn."; [cite: 22]
-            } else {
-                statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-green-100 text-green-900 border border-green-300 block";
-                statusDiv.innerText = "✅ AN TOÀN ĐƯỜNG MIỆNG: Bệnh nhân vượt qua bài test SSA, có thể áp dụng chế độ ăn mềm dễ nuốt dưới sự giám sát của điều dưỡng."; [cite: 22]
+                warnDiv.className = "mt-3 p-2 rounded-lg text-xs font-bold bg-green-100 text-green-800 border border-green-200 block";
+                warnDiv.innerText = `✅ Điểm < 3: Nguy cơ thấp.`;
             }
         }
 
-        // 4. Tính toán điểm GUSS (Phần 1 độc lập điều phối phần 2)
+        // Tính điểm Charlson Comorbidity Index (CCI) tự động
+        function calculateCCI() {
+            let totalCCI = 0;
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][data-weight]');
+            checkboxes.forEach(cb => {
+                if(cb.checked) {
+                    totalCCI += parseInt(cb.getAttribute('data-weight'));
+                }
+            });
+            document.getElementById('cci_total').innerText = totalCCI;
+        }
+
+        // Tính toán điểm GUSS nâng cấp
         function calculateGUSS() {
-            let p1 = parseInt(document.getElementById('G_E01').value) +
-                     parseInt(document.getElementById('G_E02').value) +
-                     parseInt(document.getElementById('G_E03').value) +
-                     parseInt(document.getElementById('G_E04').value) +
-                     parseInt(document.getElementById('G_E05').value); [cite: 39]
-            
+            let p1 = 0;
+            const fields = ['G_E01', 'G_E02', 'G_E03', 'G_E04', 'G_E05'];
+            let allP1Filled = true;
+            fields.forEach(f => {
+                let val = document.getElementById(f).value;
+                if(val !== "") p1 += parseInt(val);
+                else allP1Filled = false;
+            });
+
             let directSec = document.getElementById('guss_direct_section');
             let statusDiv = document.getElementById('guss_status');
 
-            if(p1 < 5) { [cite: 41]
+            if(allP1Filled && p1 < 5) {
                 document.getElementById('guss_total').innerText = p1;
                 directSec.classList.add('opacity-40', 'pointer-events-none');
                 statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-red-100 text-red-900 block";
-                statusDiv.innerText = `🛑 GUSS < 5 điểm ở Phần Gián Tiếp: DỪNG test trực tiếp ngay lập tức! Nguy cơ hít sặc rất cao, chống chỉ định ăn uống đường miệng.`; [cite: 41]
+                statusDiv.innerText = `🛑 GUSS < 5 điểm (Phần gián tiếp): DỪNG ĐÁNH GIÁ TRỰC TIẾP. Nguy cơ hít sặc cực cao.`;
                 return;
             }
 
             directSec.classList.remove('opacity-40', 'pointer-events-none');
             
-            // Tính toán động phần trực tiếp dựa trên check âm tính (vì form gốc biểu diễn check không sặc là điểm cộng)
-            let directScore = 15; // Giả định tối đa phần trực tiếp
-            if(!document.getElementById('G_F01').checked || document.getElementById('G_F02').checked || document.getElementById('G_F03').checked || document.getElementById('G_F04').checked) directScore -= 5; [cite: 44]
-            if(!document.getElementById('G_H01').checked || document.getElementById('G_H02').checked || document.getElementById('G_H03').checked || document.getElementById('G_H04').checked) directScore -= 5; [cite: 45]
-            if(!document.getElementById('G_H05').checked || document.getElementById('G_H06').checked || document.getElementById('G_H07').checked || document.getElementById('G_H08').checked) directScore -= 5; [cite: 45]
+            let semi = document.getElementById('G_S_Semi').value;
+            let liq = document.getElementById('G_S_Liq').value;
+            let sol = document.getElementById('G_S_Sol').value;
+
+            let directScore = 0;
+            if(semi !== "") directScore += parseInt(semi);
+            if(liq !== "") directScore += parseInt(liq);
+            if(sol !== "") directScore += parseInt(sol);
 
             let totalGUSS = p1 + directScore;
             document.getElementById('guss_total').innerText = totalGUSS;
 
-            if(totalGUSS <= 9) { [cite: 47]
-                statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-red-100 text-red-900 block";
-                statusDiv.innerText = `Mức độ: RỐI LOẠN NUỐT NẶNG (${totalGUSS}đ) -> Nuốt không an toàn.`; [cite: 47]
-            } else if (totalGUSS <= 14) { [cite: 47]
-                statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 block";
-                statusDiv.innerText = `Mức độ: RỐI LOẠN NUỐT TRUNG BÌNH (${totalGUSS}đ) -> Cần chế độ ăn đặc biệt.`; [cite: 47]
-            } else {
-                statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-green-100 text-green-900 block";
-                statusDiv.innerText = `Mức độ: RỐI LOẠN NUỐT NHẸ / BÌNH THƯỜNG (${totalGUSS}đ).`; [cite: 47]
+            if(semi !== "" || liq !== "" || sol !== "") {
+                if(totalGUSS <= 9) {
+                    statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-red-100 text-red-900 block";
+                    statusDiv.innerText = `Mức độ: RỐI LOẠN NUỐT NẶNG (${totalGUSS}đ)`;
+                } else if(totalGUSS <= 14) {
+                    statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 block";
+                    statusDiv.innerText = `Mức độ: RỐI LOẠN NUỐT TRUNG BÌNH (${totalGUSS}đ)`;
+                } else {
+                    statusDiv.className = "p-2 rounded-lg text-xs font-bold bg-green-100 text-green-900 block";
+                    statusDiv.innerText = `Mức độ: RỐI LOẠN NUỐT NHẸ HOẶC BÌNH THƯỜNG (${totalGUSS}đ)`;
+                }
             }
         }
 
-        // 5. Thuật toán giám sát Sai số kiểm chứng (Verification Bias Watchdog)
-        function checkVerificationBias() {
-            let eatValue = 0;
-            let checked = document.querySelector(`input[name="eat_0"]:checked`);
-            // Lấy nhanh tổng điểm hiện tại để kiểm tra
-            let currentEat = parseInt(document.getElementById('eat10_total').innerText);
-            let pasValue = parseInt(document.getElementById('K_PAS').value);
-            let alertBox = document.getElementById('verification_bias_alert');
+        // ==========================================
+        // ĐỘNG CƠ XỬ LÝ DATABASE (LOCALSTORAGE ENGINE)
+        // ==========================================
 
-            // Nếu EAT-10 < 3 (Sàng lọc Âm tính) nhưng vẫn có kết quả can thiệp sâu FEES
-            if(currentEat < 3 && pasValue > 1) { [cite: 20, 52, 53, 54]
-                alertBox.classList.remove('hidden');
-            } else {
-                alertBox.classList.add('hidden');
-            }
+        function getDatabase() {
+            let data = localStorage.getItem('eCRF_Database');
+            return data ? JSON.parse(data) : {};
         }
-        document.getElementById('K_PAS').addEventListener('change', checkVerificationBias);
 
-        // 6. Hàm xuất file Excel chuẩn cấu trúc dữ liệu nghiên cứu y học
-        function exportToExcel() {
-            let form = document.getElementById('ecrfForm');
-            let formData = {};
+        function savePatientData() {
+            let pID = document.getElementById('A00_ID').value.trim();
+            let pName = document.getElementById('A00').value.trim();
             
-            // Thu thập toàn bộ các trường dữ liệu text/select
-            form.querySelectorAll('input, select').forEach(element => {
-                if(element.id) {
-                    if(element.type === 'checkbox') {
-                        formData[element.id] = element.checked ? 1 : 0;
-                    } else {
-                        formData[element.id] = element.value;
+            if(!pID || !pName) {
+                alert("Bắt buộc phải điền Họ tên và Mã định danh ID bệnh nhân để khởi tạo bản ghi!");
+                return;
+            }
+
+            let db = getDatabase();
+            let patientRecord = {};
+
+            // Thu thập dữ liệu từ tất cả các input/select thường
+            const elements = document.getElementById('ecrfForm').querySelectorAll('input, select');
+            elements.forEach(el => {
+                if(el.id) {
+                    if(el.type === 'checkbox') {
+                        patientRecord[el.id] = el.checked ? 1 : 0;
+                    } else if(el.type !== 'radio') {
+                        patientRecord[el.id] = el.value;
                     }
                 }
             });
 
-            // Ghi nhận thêm điểm số tính toán tự động
-            formData['TONG_EAT10'] = document.getElementById('eat10_total').innerText;
-            formData['TONG_GUSS'] = document.getElementById('guss_total').innerText;
-            
-            // Đánh dấu Flag phục vụ hiệu chỉnh Begg & Greenes sau này
-            formData['FLAG_Verification_Bias'] = (parseInt(formData['TONG_EAT10']) < 3 && parseInt(formData['K_PAS']) > 1) ? 1 : 0; [cite: 20]
+            // Thu thập dữ liệu từ radio nhóm EAT-10
+            for(let i=0; i<10; i++) {
+                let r = document.querySelector(`input[name="eat_${i}"]:checked`);
+                patientRecord[`eat_q_${i}`] = r ? r.value : "";
+            }
 
-            // Sử dụng thư viện SheetJS để kết xuất cấu trúc dòng dữ liệu
-            let worksheet = XLSX.utils.json_to_sheet([formData]);
-            let workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Patient_Data_eCRF");
+            // Ghi nhận điểm số tính toán tự động
+            patientRecord['Calculated_CCI'] = document.getElementById('cci_total').innerText;
+            patientRecord['Calculated_EAT10'] = document.getElementById('eat10_total').innerText;
+            patientRecord['Calculated_GUSS'] = document.getElementById('guss_total').innerText;
+            patientRecord['Timestamp'] = new Date().toLocaleString('vi-VN');
+
+            // Lưu vào cây thư mục DB
+            db[pID] = patientRecord;
+            localStorage.setItem('eCRF_Database', JSON.stringify(db));
             
-            // Đặt tên file theo mã bệnh nhân để tránh ghi đè nhầm lẫn
-            let filename = `eCRF_ROILOANNUOT_${formData['A00'] || 'ANONYMOUS'}.xlsx`;
-            XLSX.writeFile(workbook, filename);
+            alert(`Đã lưu thành công thông tin bệnh nhân: ${pName} (${pID})`);
+            renderPatientList();
         }
 
-        function resetForm() {
-            if(confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu hiện tại để nhập bệnh nhân mới?")) {
-                document.getElementById('ecrfForm').reset();
-                calculateEAT10();
-                calculateSSA();
-                calculateGUSS();
+        // Hiển thị danh sách bệnh nhân và bộ lọc tra cứu nhanh
+        function renderPatientList() {
+            let db = getDatabase();
+            let searchKey = document.getElementById('search_box').value.toLowerCase().trim();
+            let container = document.getElementById('patient_list_container');
+            container.innerHTML = "";
+
+            let keys = Object.keys(db);
+            document.getElementById('patient_count').innerText = keys.length;
+
+            let filteredKeys = keys.filter(k => {
+                return k.toLowerCase().includes(searchKey) || db[k]['A00'].toLowerCase().includes(searchKey);
+            });
+
+            if(filteredKeys.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 italic text-center py-4">Không tìm thấy bản ghi nào.</p>`;
+                return;
+            }
+
+            filteredKeys.forEach(k => {
+                let p = db[k];
+                let card = document.createElement('div');
+                card.className = "p-3 bg-slate-50 border border-slate-200 rounded-lg shadow-2xs hover:bg-slate-100 cursor-pointer flex justify-between items-center transition";
+                card.innerHTML = `
+                    <div onclick="loadPatientToForm('${k}')" class="flex-1">
+                        <div class="font-bold text-slate-900">${p['A00']}</div>
+                        <div class="text-2xs text-slate-500">ID: <span class="text-blue-600 font-semibold">${k}</span> | GUSS: ${p['Calculated_GUSS']}đ | CCI: ${p['Calculated_CCI']}đ</div>
+                    </div>
+                    <button onclick="deletePatient('${k}')" class="text-red-500 hover:text-red-700 font-bold px-2 text-sm" title="Xóa dữ liệu">×</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Tải ngược dữ liệu từ bộ nhớ lên Form để xem và chỉnh sửa thêm
+        function loadPatientToForm(pID) {
+            let db = getDatabase();
+            let p = db[pID];
+            if(!p) return;
+
+            clearCurrentFormWithoutConfirm();
+
+            // Phục hồi dữ liệu dạng text/select/checkbox
+            Object.keys(p).forEach(key => {
+                let el = document.getElementById(key);
+                if(el) {
+                    if(el.type === 'checkbox') {
+                        el.checked = p[key] === 1;
+                    } else {
+                        el.value = p[key];
+                    }
+                }
+            });
+
+            // Phục hồi dữ liệu EAT-10 radio
+            for(let i=0; i<10; i++) {
+                let val = p[`eat_q_${i}`];
+                if(val !== "") {
+                    let rad = document.querySelector(`input[name="eat_${i}"][value="${val}"]`);
+                    if(rad) rad.checked = true;
+                }
+            }
+
+            // Chạy lại hàm tính điểm để đồng bộ giao diện
+            calculateCCI();
+            calculateEAT10();
+            calculateGUSS();
+            
+            // Kích hoạt cưỡng bức đổi màu trường đã chọn bằng cách phát sự kiện input
+            document.getElementById('ecrfForm').querySelectorAll('input, select').forEach(el => {
+                let event = new Event('change');
+                el.dispatchEvent(event);
+            });
+            
+            alert(`Đã nạp hồ sơ bệnh nhân ${p['A00']} lên biểu mẫu để chỉnh sửa bổ sung.`);
+        }
+
+        function deletePatient(pID) {
+            if(confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn hồ sơ bệnh nhân có ID: ${pID}? Việc này không thể hoàn tác.`)) {
+                let db = getDatabase();
+                delete db[pID];
+                localStorage.setItem('eCRF_Database', JSON.stringify(db));
+                renderPatientList();
+                clearCurrentFormWithoutConfirm();
             }
         }
 
-        // Khởi chạy trạng thái mặc định ban đầu
-        calculateEAT10();
-        calculateSSA();
-        calculateGUSS();
+        function clearCurrentForm() {
+            if(confirm("Xóa trắng biểu mẫu hiện tại? (Dữ liệu đã lưu bên danh sách trái không bị ảnh hưởng)")) {
+                clearCurrentFormWithoutConfirm();
+            }
+        }
+
+        function clearCurrentFormWithoutConfirm() {
+            document.getElementById('ecrfForm').reset();
+            // Xóa thủ công màu nền của EAT-10 cũ
+            for(let i=0; i<10; i++) {
+                let r = document.querySelector(`input[name="eat_${i}"]:checked`);
+                if(r) r.checked = false;
+                let container = document.getElementsByName(`eat_${i}`)[0]?.closest('div').parentElement;
+                if(container) {
+                    container.style.backgroundColor = '#ffffff';
+                    container.style.borderColor = '#e2e8f0';
+                }
+            }
+            document.getElementById('cci_total').innerText = "0";
+            document.getElementById('eat10_total').innerText = "0";
+            document.getElementById('guss_total').innerText = "0";
+            document.getElementById('eat10_warning').classList.add('hidden');
+            document.getElementById('guss_status').className = "";
+            document.getElementById('guss_status').innerText = "";
+        }
+
+        // Xuất toàn bộ kho cơ sở dữ liệu thành file Excel cấu trúc bảng phẳng phục vụ SPSS/R
+        function exportAllToExcel() {
+            let db = getDatabase();
+            let keys = Object.keys(db);
+            if(keys.length === 0) {
+                alert("Chưa có dữ liệu bệnh nhân nào được lưu trữ để xuất Excel!");
+                return;
+            }
+
+            let dataRows = [];
+            keys.forEach(k => {
+                dataRows.push(db[k]);
+            });
+
+            let worksheet = XLSX.utils.json_to_sheet(dataRows);
+            let workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "CSDL_NghienCuu_Nuot");
+            
+            let dateStr = new Date().toISOString().slice(0,10);
+            XLSX.writeFile(workbook, `CSDL_CRF_ROILOANNUOT_${dateStr}.xlsx`);
+        }
+
+        // Khởi động trạng thái
+        renderPatientList();
     </script>
 </body>
 </html>
